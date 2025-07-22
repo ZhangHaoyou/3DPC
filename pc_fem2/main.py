@@ -3,23 +3,22 @@
 
 import time
 import torch
+import random
+import numpy as np
 
 
+
+from pc_fem.config_loader import load_config
 from pc_fem.fem.materials import Quadrilinear_Concrete, Five_Line_Concrete
 from pc_fem.fem.damage import Mazars_Original_Damage, Mazars_Original_Damage_Torch, Mu_Damage, Modified_Mazars_Damage
-from pc_fem.fem.geo_mesh import Geometry, Mesh
-from pc_fem.fem.finite_element_method import Finite_Element_Method
-from pc_fem.config_loader import load_config
 
 
-from dl.pinn.pde import PDE
-from dl.pinn.pinn import PINN
-from dl.pinn.networks import MLP
-from dl.pinn.geometry import Layered_Contact_Geometry
-from dl.pinn.incremental_pressure_applier import Incremental_Pressure_Applier
 
 
 def main_fem():
+    from pc_fem.fem.geo_mesh import Geometry, Mesh
+    from pc_fem.fem.finite_element_method import Finite_Element_Method
+    
     start_time = time.time()
     
     # units: mm, N, MPa, ton, second
@@ -54,8 +53,23 @@ def main_fem():
     elapsed_minutes = (end_time - start_time) / 60
     print(f"\nAnalysis done. Elapsed time: {elapsed_minutes:.2f} minutes.")
 
-def main_dl() -> None:
+def main_pinn() -> None:
+    from dl.pinn.pde import PDE
+    from dl.pinn.pinn import PINN
+    from dl.pinn.networks import MLP
+    from dl.pinn.geometry import Layered_Contact_Geometry
+    from dl.pinn.incremental_pressure_applier import Incremental_Pressure_Applier
+    
     start_time = time.time()
+    
+    SEED = 2025
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark     = False
     
     # units: mm, N, MPa, ton, second
     config = 'configs/config_pinn.yaml'
@@ -77,10 +91,54 @@ def main_dl() -> None:
     # PINN
     pinn = PINN(net=net, pde=pde, geom=geom, num_domain=8, num_bc=16, device=device)
     
-    n_step = 35
+    n_step = 30
     ipa = Incremental_Pressure_Applier(pinn=pinn, dmg=dmg)
-    ipa.apply_load(pressure=-1.0, n_step=n_step, num_epochs=100)
+    ipa.apply_load(pressure=-1.0, n_step=n_step, num_epochs=1000)
     ipa.save_to_vtu(n_step=n_step)
+    ipa.plot_load_disp()
+    
+    end_time = time.time()
+    elapsed_minutes = (end_time - start_time) / 60
+    pinn.logger.debug(f"Done. Elapsed time: {elapsed_minutes:.2f} minutes.")
+
+def main_graph():
+    from dl.graph.pde import PDE_Graph
+    from dl.graph.pinn import PINN_Graph
+    from dl.graph.incremental_pressure_applier import Incremental_Pressure_Applier_Graph
+    from dl.pinn.networks import GraphSAGE
+    from dl.pinn.geometry import Layered_Contact_Geometry
+    
+    start_time = time.time()
+    
+    SEED = 2025
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark     = False
+    
+    # units: mm, N, MPa, ton, second
+    config = 'configs/config_pinn.yaml'
+    conc_prop, dmg_para, geo_para, mesh_para, contact_para = load_config(config)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Geometry
+    geom = Layered_Contact_Geometry(para=geo_para, device=device)
+    # Network
+    net = GraphSAGE()
+    # PDE
+    mat = Quadrilinear_Concrete(prop=conc_prop)
+    dmg = Mazars_Original_Damage_Torch(mat=mat, para=dmg_para)
+    pde = PDE_Graph(net=net, E=mat.prop.E_pinn, nu=mat.prop.nu)
+    # PINN
+    pinn = PINN_Graph(net=net, pde=pde, geom=geom, num_domain=8, num_bc=16, device=device)
+    n_step = 30
+    ipa = Incremental_Pressure_Applier_Graph(pinn=pinn, dmg=dmg)
+    ipa.apply_load(pressure=-1.0, n_step=n_step, num_epochs=1000)
+    ipa.save_to_vtu(n_step=n_step)
+    ipa.plot_load_disp()
     
     end_time = time.time()
     elapsed_minutes = (end_time - start_time) / 60
@@ -89,4 +147,5 @@ def main_dl() -> None:
 
 if __name__ == '__main__':
     # main_fem()
-    main_dl()
+    # main_pinn()
+    main_graph()

@@ -1,4 +1,4 @@
-# dl/pinn/incremental_pressure_applier.py
+# dl/graph/incremental_pressure_applier.py
 
 
 import torch
@@ -6,6 +6,8 @@ import platform
 import numpy as np
 import matplotlib.pyplot as plt
 
+from torch_geometric.data import Data
+from torch_geometric.nn import knn_graph
 from typing import Tuple
 
 
@@ -13,8 +15,8 @@ from pc_fem.fem.damage import Damage
 from pc_fem.utils.log_config import setup_logger
 
 
-from dl.pinn.pinn import PINN
-from dl.pinn.scaler import Scaler
+from dl.graph.pinn import PINN_Graph
+from dl.graph.scaler import Scaler_Graph
 
 
 # Configure global plotting style (Times New Roman for all figures)
@@ -61,7 +63,7 @@ def voigt_to_tensor(strain: torch.Tensor) -> torch.Tensor:
     # stack into (N,3,3)
     return torch.stack([row0, row1, row2], dim=1)
 
-class Incremental_Pressure_Applier:
+class Incremental_Pressure_Applier_Graph:
     """Apply incremental pressure loading to a printed concrete column using PINN + damage.
     
     This class drives a loop of:
@@ -75,7 +77,7 @@ class Incremental_Pressure_Applier:
         dmg:  A damage model that computes stiffness degradation.
         logger: Logger for tracking the loading steps.
     """
-    def __init__(self, pinn: PINN, dmg: Damage) -> None:
+    def __init__(self, pinn: PINN_Graph, dmg: Damage) -> None:
         """Initialize with a PINN instance and a damage model.
         
         Args:
@@ -85,7 +87,7 @@ class Incremental_Pressure_Applier:
         self.pinn = pinn
         self.dmg  = dmg
         
-        self.logger = setup_logger(name=self.__class__.__name__, log_dir='log/pinn/log')
+        self.logger = setup_logger(name=self.__class__.__name__, log_dir='log/graph/log')
     
     def apply_load(self, pressure: float, n_step: int, num_epochs: int) -> None:
         """Apply pressure in n_step increments, retrain PINN, and record response.
@@ -98,11 +100,11 @@ class Incremental_Pressure_Applier:
         Side effects:
             - Retrains and re‐saves PINN weights for each layer
             - Updates PINN geometry in place
-            - Writes `log/pinn/load_disp.csv` containing [disp, load] history
+            - Writes `log/graph/load_disp.csv` containing [disp, load] history
         """
         # 1) Prepare the set of top‐face sample points (constant throughout)
-        top_points = self.pinn.geom.generate_random_points_on_top(N=self.pinn.num_bc, method='linspace', seed=0)
-        N = top_points.shape[0]
+        top_points = self.pinn.geom.generate_top_graph(N=self.pinn.num_bc, method='linspace', seed=0, k=8)
+        N = top_points.x.shape[0]
         # 2) Initialize accumulators
         disp_accum = torch.zeros([N, 3], device=self.pinn.device)
         stress = torch.zeros([N, 6], device=self.pinn.device)
@@ -134,7 +136,7 @@ class Incremental_Pressure_Applier:
                 )
             E_d = (1.0 - d) * self.dmg.mat.prop.E
             # 6) predict under current degraded modulus
-            pred_top = self.pinn.predict(x=top_points, E=E_d, step=0)
+            pred_top = self.pinn.predict(x=top_points.x, edge_index=top_points.edge_index, E=E_d, step=0)
             disp_accum += pred_top[:, :3]
             stress += pred_top[:, 3:9]
             strain += pred_top[:, 9:15]
@@ -146,13 +148,13 @@ class Incremental_Pressure_Applier:
             disp_history.append(disp.item())
             load_history.append((step + 1) * pressure)
             # 9) update geometry for next increment
-            self.pinn.geom.update_geometry(step=0, pred_func=self.predict)
+            self.pinn.geom.update_geometry_graph(step=0, pred_func=self.predict)
         # 10) dump the load–displ history
         load_disp = np.column_stack((disp_history, load_history))
-        np.savetxt('log/pinn/load_disp.csv', load_disp, delimiter=',')
-        self.logger.info("Saved load–disp history to log/pinn/load_disp.csv")
+        np.savetxt('log/graph/load_disp.csv', load_disp, delimiter=',')
+        self.logger.info("Saved load–disp history to log/graph/load_disp.csv")
     
-    def predict(self, x: torch.Tensor, n_step: int) -> torch.Tensor:
+    def predict(self, x: torch.Tensor, edge_index: torch.Tensor, n_step: int) -> torch.Tensor:
         """Compute the full (u,v,w,σ,ε) response after `n_step` load increments.
         
         This will:
@@ -193,17 +195,18 @@ class Incremental_Pressure_Applier:
                     continue
                 # points in this layer
                 x_layer = x[mask]
+                edge_index_layer = knn_graph(x=x_layer, k=8, loop=False)
                 # load & eval
-                weight_path = f"log/pinn/weights/Step0_layer{layer}_weight.pth"
+                weight_path = f"log/graph/weights/Step0_layer{layer}_weight.pth"
                 state = torch.load(weight_path, map_location=self.pinn.device)
                 self.pinn.net.load_state_dict(state)
                 # build a scaler for this layer’s physical bounds
-                scaler = Scaler(net=self.pinn.net, mins=self.pinn.geom.layer_mins[layer],
+                scaler = Scaler_Graph(net=self.pinn.net, mins=self.pinn.geom.layer_mins[layer],
                         maxs=self.pinn.geom.layer_maxs[layer])
                 # compute original displacement & stress
                 u = scaler.calculate_original_displacement(x=x_layer)
-                sig = scaler.calculate_original_stress(x=x_layer)
-                eps = scaler.calculate_original_strain(x=x_layer)
+                sig = scaler.calculate_original_stress(x=x_layer, edge_index=edge_index_layer)
+                eps = scaler.calculate_original_strain(x=x_layer, edge_index=edge_index_layer)
                 out_layer = torch.cat([u, sig, eps], dim=1)
                 # add cumulative vertical shift from all underlying layers
                 out_layer[:, 2] += sum(vertical_disp[:layer+1])
@@ -241,7 +244,7 @@ class Incremental_Pressure_Applier:
             1. Uses gmsh to build and mesh stacked boxes for each layer.
             2. Reads the mesh with meshio to get node coordinates and cell connectivity.
             3. Predicts u, v, w, and stresses σₓₓ…σ𝓏ₓ at each node.
-            4. Writes separate VTU files for each field component under `log/pinn/paraview/`.
+            4. Writes separate VTU files for each field component under `log/graph/paraview/`.
             
         Side effects:
             - Writes `mesh.msh` for gmsh and multiple `.vtu` files for ParaView.
@@ -268,7 +271,9 @@ class Incremental_Pressure_Applier:
         cells  = m.cells                # list of (cell_type, indices) tuples
         # 3) Predict fields at each node
         pts_torch = torch.from_numpy(points.astype(np.float32)).to(self.pinn.device)
-        pred = self.predict(x=pts_torch, n_step=n_step).detach().cpu().numpy()    # (Nnodes,15)
+        edge_index = knn_graph(x=pts_torch, k=8, loop=False)
+        data = Data(x=pts_torch, edge_index=edge_index)
+        pred = self.predict(data.x, data.edge_index, n_step=n_step).detach().cpu().numpy()    # (Nnodes,15)
         
         disps  = {"dispx": pred[:, 0], "dispy": pred[:, 1], "dispz": pred[:, 2]}
         sigmas = {
@@ -290,7 +295,7 @@ class Incremental_Pressure_Applier:
         # 4) Write each field to its own VTU
         for name, data in {**disps, **sigmas, **epsilons}.items():
             vtk = meshio.Mesh(points=points, cells=cells, point_data={name: data})
-            vtu_path = f"log/pinn/paraview/{name}.vtu"
+            vtu_path = f"log/graph/paraview/{name}.vtu"
             meshio.write(vtu_path, vtk)
             self.logger.debug(f"Wrote {vtu_path}")
     
@@ -299,7 +304,8 @@ class Incremental_Pressure_Applier:
         fem_data = np.loadtxt('data/FEM_load_disp.csv', delimiter=',')
         exp_data = np.loadtxt('data/Experimental_data.csv', delimiter=',', skiprows=2)
         telichko_data = np.loadtxt('data/Telichko.csv', delimiter=',', skiprows=2)
-        pinn_data = np.loadtxt('log/pinn/load_disp.csv', delimiter=',')
+        mlp_data = np.loadtxt('log/pinn/load_disp.csv', delimiter=',')
+        graph_data = np.loadtxt('log/graph/load_disp.csv', delimiter=',')
         
         fig, ax = plt.subplots(figsize=(9, 6))
         
@@ -316,16 +322,21 @@ class Incremental_Pressure_Applier:
                 linestyle='--', marker='o', linewidth=1.5, alpha=0.6)
         
         # Plot PINN - gold dashed with transparency
-        load = (-pinn_data[:, 1] * self.pinn.geom.area) / 1000.0
-        ax.plot(-pinn_data[:, 0], load, label='PINN', color=(255/255,204/255,0),
+        load = (-mlp_data[:, 1] * self.pinn.geom.area) / 1000.0
+        ax.plot(-mlp_data[:, 0], load, label='MLP', color=(255/255,204/255,0),
+                linestyle='--', marker='o', linewidth=1.5, alpha=0.6)
+        
+        # Plot PINN_Graph - gold dashed with transparency
+        load = (-graph_data[:, 1] * self.pinn.geom.area) / 1000.0
+        ax.plot(-graph_data[:, 0], load, label='Graph', color=(0,255/255,0),
                 linestyle='--', marker='o', linewidth=1.5, alpha=0.6)
         
         # Axis settings
         ax.set_xlabel('Displacement (mm)', fontsize=12)
         ax.set_ylabel('Load (kN)', fontsize=12)
-        ax.set_xlim(0, 1.5)
+        ax.set_xlim(0, 0.8)
         ax.set_ylim(0, 70)
-        ax.set_xticks(np.arange(0, 1.5, 0.5))
+        ax.set_xticks(np.arange(0, 0.8, 0.2))
         ax.set_yticks(np.arange(0, 80, 10))
         ax.tick_params(labelsize=10)
 
@@ -334,6 +345,6 @@ class Incremental_Pressure_Applier:
 
         # Save figure
         fig.tight_layout()
-        fig.savefig('log/pinn/Result.png', dpi=300)
+        fig.savefig('log/graph/Result.png', dpi=300)
         
         return fig, ax

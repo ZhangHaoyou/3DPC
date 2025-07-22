@@ -4,8 +4,10 @@
 import torch
 import numpy as np
 
-from abc import ABC
-from typing import Tuple
+from torch_geometric.data import Data
+from torch_geometric.nn import knn_graph
+from abc import ABC, abstractmethod
+from typing import Tuple, List
 
 
 from pc_fem.parameters import Geometry_Parameter
@@ -68,6 +70,92 @@ class PINN_Geometry(ABC):
             return torch.as_tensor(arr, dtype=dtype, device=device)
         else:
             raise ValueError(f"Unknown sampling method '{method}'")
+    
+    @abstractmethod
+    def generate_random_points_inside(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    @abstractmethod
+    def generate_random_points_on_top(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    @abstractmethod
+    def generate_random_points_on_bottom(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    @abstractmethod
+    def generate_random_points_on_front(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    @abstractmethod
+    def generate_random_points_on_back(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    @abstractmethod
+    def generate_random_points_on_right(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    @abstractmethod
+    def generate_random_points_on_left(N: int, method: str, seed: int) -> torch.Tensor:
+        pass
+    
+    def generate_inside_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        inside_points = self.generate_random_points_inside(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=inside_points, k=k, loop=False)
+        data_inside = Data(x=inside_points, edge_index=edge_index)
+        return data_inside
+    
+    def generate_top_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        top_points = self.generate_random_points_on_top(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=top_points, k=k, loop=False)
+        data_top = Data(x=top_points, edge_index=edge_index)
+        return data_top
+    
+    def generate_bottom_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        bottom_points = self.generate_random_points_on_bottom(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=bottom_points, k=k, loop=False)
+        data_bottom = Data(x=bottom_points, edge_index=edge_index)
+        return data_bottom
+    
+    def generate_front_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        front_points = self.generate_random_points_on_front(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=front_points, k=k, loop=False)
+        data_front = Data(x=front_points, edge_index=edge_index)
+        return data_front
+    
+    def generate_back_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        back_points = self.generate_random_points_on_back(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=back_points, k=k, loop=False)
+        data_back = Data(x=back_points, edge_index=edge_index)
+        return data_back
+    
+    def generate_right_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        right_points = self.generate_random_points_on_right(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=right_points, k=k, loop=False)
+        data_right = Data(x=right_points, edge_index=edge_index)
+        return data_right
+    
+    def generate_left_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        left_points = self.generate_random_points_on_left(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=left_points, k=k, loop=False)
+        data_left = Data(x=left_points, edge_index=edge_index)
+        return data_left
+    
+    def combine_graphs(self, graph_list: List[Data]):
+        all_x = []
+        all_edge_indices = []
+        offset = 0
+        for graph in graph_list:
+            num_nodes = graph.x.size(0)
+            all_x.append(graph.x)
+            # Adjust edge_index by current node offset
+            edge_index = graph.edge_index + offset
+            all_edge_indices.append(edge_index)
+            offset += num_nodes
+        combined_x = torch.cat(all_x, dim=0)
+        combined_edge_index = torch.cat(all_edge_indices, dim=1)  # concat along edges
+        combined_graph = Data(x=combined_x, edge_index=combined_edge_index)
+        return combined_graph
 
 class Single_Contact_Geometry(PINN_Geometry):
     """Axis-aligned bounding-box geometry for a single contact region.
@@ -513,6 +601,7 @@ class Layered_Contact_Geometry(PINN_Geometry):
         self.lx = torch.tensor(para.lx / 2.0, device=device)
         self.ly = torch.tensor(para.ly / 2.0, device=device)
         self.lz = torch.tensor(para.lz, device=device)
+        self.area = para.lx * para.ly
         self.n_layers = para.n_layers
         self.device = device
         
@@ -659,6 +748,12 @@ class Layered_Contact_Geometry(PINN_Geometry):
                 side_points, contact_points], dim=0)
         return domain_points
     
+    def generate_contact_graph(self, N: int, method: str, seed: int, k: int) -> Data:
+        contact_points = self.generate_random_points_on_contact(N=N, method=method, seed=seed)
+        edge_index = knn_graph(x=contact_points, k=k, loop=False)
+        data_contact = Data(x=contact_points, edge_index=edge_index)
+        return data_contact
+    
     def update_geometry(self, step: int, pred_func: callable) -> None:
         N = 16
         method = 'linspace'
@@ -686,5 +781,33 @@ class Layered_Contact_Geometry(PINN_Geometry):
             self.bboxes[i, 1, 1] += pred_y_max[i * N**2:(i+1) * N**2].mean()
             self.bboxes[i, 0, 2] += pred_z[i * N**2:(i+1) * N**2].mean()
             self.bboxes[i, 1, 2] += pred_z[(i + 1) * N**2:(i+2) * N**2].mean()
+    
+    def update_geometry_graph(self, step: int, pred_func: callable) -> None:
+        N = 16
+        method = 'linspace'
+        seed = 0
+        k = 8
+        bottom_points = self.generate_bottom_graph(N=N, method=method, seed=seed, k=k)
+        contact_points = self.generate_contact_graph(N=N, method=method, seed=seed, k=k)
+        top_points = self.generate_top_graph(N=N, method=method, seed=seed, k=k)
+        z_points = self.combine_graphs(graph_list=[bottom_points, contact_points, top_points]).to(self.device)
+        pred_z = pred_func(x=z_points.x, edge_index=z_points.edge_index, n_step=step)[:, 2]
         
+        right_points = self.generate_right_graph(N=N, method=method, seed=seed, k=k).to(self.device)
+        left_points = self.generate_left_graph(N=N, method=method, seed=seed, k=k).to(self.device)
+        pred_y_max = pred_func(x=right_points.x, edge_index=right_points.edge_index, n_step=step)[:, 1]
+        pred_y_min = pred_func(x=left_points.x, edge_index=left_points.edge_index, n_step=step)[:, 1]
+        
+        front_points = self.generate_front_graph(N=N, method=method, seed=seed, k=k)
+        back_points = self.generate_back_graph(N=N, method=method, seed=seed, k=k)
+        pred_x_max = pred_func(x=front_points.x, edge_index=front_points.edge_index, n_step=step)[:, 0]
+        pred_x_min = pred_func(x=back_points.x, edge_index=back_points.edge_index, n_step=step)[:, 0]
+        for i in range(self.n_layers):
+            # (L, 2, 3), 0: min, 1: max
+            self.bboxes[i, 0, 0] += pred_x_min[i * N**2:(i+1) * N**2].mean()
+            self.bboxes[i, 1, 0] += pred_x_max[i * N**2:(i+1) * N**2].mean()
+            self.bboxes[i, 0, 1] += pred_y_min[i * N**2:(i+1) * N**2].mean()
+            self.bboxes[i, 1, 1] += pred_y_max[i * N**2:(i+1) * N**2].mean()
+            self.bboxes[i, 0, 2] += pred_z[i * N**2:(i+1) * N**2].mean()
+            self.bboxes[i, 1, 2] += pred_z[(i + 1) * N**2:(i+2) * N**2].mean()
         

@@ -1,0 +1,1 @@
+[2025-07-21 15:26:19] INFO - Mazars_Original_Damage_Torch - Initialized Mazars Original Damage PyTorch with parameters: {'At': 1.0, 'Bt': 41085, 'Ac': 1.0, 'Bc': 3500, 'ib': 1.0, 'control': 'compression-tension', 'k': 0.75, 'G_ft': 0.15, 'G_fc': 60, 'model_type': 'arruda'}

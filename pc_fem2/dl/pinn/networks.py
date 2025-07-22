@@ -4,6 +4,8 @@
 import torch
 import torch.nn as nn
 
+from torch_geometric.nn import SAGEConv
+
 
 class MLP(nn.Module):
     def __init__(self, layer_size):
@@ -30,3 +32,25 @@ class MLP(nn.Module):
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.mlp(x)
+
+class GraphSAGE(nn.Module):
+    def __init__(self, input_dim=3, hidden_dim=64, output_dim=9):
+        super().__init__()
+        self.conv1 = SAGEConv(input_dim, hidden_dim)
+        self.conv2 = SAGEConv(hidden_dim, hidden_dim)
+        self.conv3 = SAGEConv(hidden_dim, hidden_dim)
+        self.act   = nn.GELU()
+        self.lin = torch.nn.Linear(hidden_dim, output_dim)
+        
+    def forward(self, x, edge_index) -> torch.Tensor:
+        x = self.conv1(x, edge_index)
+        x = self.act(x)
+        
+        x = self.conv2(x, edge_index)
+        x = self.act(x)
+        
+        x = self.conv3(x, edge_index)
+        x = self.act(x)
+        
+        x = self.lin(x)
+        return x

@@ -1,0 +1,10 @@
+[2025-07-21 21:37:43] INFO - Incremental_Pressure_Applier_Graph - Saved load–disp history to log/graph/load_disp.csv
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/dispx.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/dispy.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/dispz.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/sig_x.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/sig_y.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/sig_z.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/eps_x.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/eps_y.vtu
+[2025-07-21 21:37:53] DEBUG - Incremental_Pressure_Applier_Graph - Wrote log/graph/paraview/eps_z.vtu
