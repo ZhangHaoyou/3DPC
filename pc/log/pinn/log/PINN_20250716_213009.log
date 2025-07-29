@@ -1,0 +1,69 @@
+[2025-07-16 21:30:09] DEBUG - PINN - Using device: cuda
+[2025-07-16 21:30:09] INFO - PINN - Geometry parameters: lx=22.500, ly=22.500, lz=15.000
+[2025-07-16 21:30:09] INFO - PINN - NN architecture layers: MLP(
+  (mlp): Sequential(
+    (0): Linear(in_features=3, out_features=50, bias=True)
+    (1): Tanh()
+    (2): Linear(in_features=50, out_features=50, bias=True)
+    (3): Tanh()
+    (4): Linear(in_features=50, out_features=50, bias=True)
+    (5): Tanh()
+    (6): Linear(in_features=50, out_features=50, bias=True)
+    (7): Tanh()
+    (8): Linear(in_features=50, out_features=50, bias=True)
+    (9): Tanh()
+    (10): Linear(in_features=50, out_features=50, bias=True)
+    (11): Tanh()
+    (12): Linear(in_features=50, out_features=50, bias=True)
+    (13): Tanh()
+    (14): Linear(in_features=50, out_features=50, bias=True)
+    (15): Tanh()
+    (16): Linear(in_features=50, out_features=50, bias=True)
+    (17): Tanh()
+    (18): Linear(in_features=50, out_features=50, bias=True)
+    (19): Tanh()
+    (20): Linear(in_features=50, out_features=50, bias=True)
+    (21): Tanh()
+    (22): Linear(in_features=50, out_features=50, bias=True)
+    (23): Tanh()
+    (24): Linear(in_features=50, out_features=50, bias=True)
+    (25): Tanh()
+    (26): Linear(in_features=50, out_features=50, bias=True)
+    (27): Tanh()
+    (28): Linear(in_features=50, out_features=50, bias=True)
+    (29): Tanh()
+    (30): Linear(in_features=50, out_features=9, bias=True)
+  )
+)
+[2025-07-16 21:30:09] INFO - PINN - PDE material: E=1.000, nu=0.250
+[2025-07-16 21:30:09] INFO - PINN - Contact BC pressure: -1.000 from layer 11
+[2025-07-16 21:30:12] DEBUG - PINN - Starting Adam training for layer 10 (100 epochs, lr=1.0e-03)
+[2025-07-16 21:30:12] DEBUG - PINN - Point counts: inside=512, top=256, bottom=256, front=256, back=256, right=256, left=256
+[2025-07-16 21:30:12] DEBUG - PINN - Inside points shape: (512, 3)
+[2025-07-16 21:30:12] DEBUG - PINN - Top points shape:    (256, 3)
+[2025-07-16 21:30:12] DEBUG - PINN - Bottom points shape: (256, 3)
+[2025-07-16 21:30:12] DEBUG - PINN - Front points shape:  (256, 3)
+[2025-07-16 21:30:12] DEBUG - PINN - Back points shape:   (256, 3)
+[2025-07-16 21:30:12] DEBUG - PINN - Right points shape:  (256, 3)
+[2025-07-16 21:30:12] DEBUG - PINN - Left points shape:   (256, 3)
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch 50 PDE terms: [1: 3.009e-04, 2: 2.245e-04, 3: 8.195e-05, 4: 3.667e-03, 5: 1.524e-03, 6: 8.885e-03, 7: 3.644e-04, 8: 8.178e-04, 9: 2.326e-03]
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch  50 boundary top    loss: 5.898e-03 | szz=pressure: 5.253e-03, syz=0: 3.674e-04, szx=0: 2.781e-04
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch  50 boundary front  loss: 2.452e-03 | sxx=0: 1.473e-03, sxy=0: 6.756e-04, szx=0: 3.031e-04
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch  50 boundary back   loss: 1.923e-03 | u=0: 1.789e-03, sxy=0: 5.309e-05, szx=0: 8.139e-05
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch  50 boundary right  loss: 3.690e-03 | syy=0: 2.555e-03, sxy=0: 6.372e-04, syz=0: 4.977e-04
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch  50 boundary left   loss: 9.152e-04 | v=0: 5.543e-04, sxy=0: 7.886e-05, syz=0: 2.820e-04
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch  50 boundary bottom loss: 3.490e-03 | gn=0: 6.426e-04, t1=0: 1.178e-03, t2=0: 1.670e-03
+[2025-07-16 21:30:16] DEBUG - PINN - Epoch 50 TOTALS -> PDE: 1.819e-02, Bcs: 1.837e-02, LOSS: 3.656e-02
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 PDE terms: [1: 6.923e-05, 2: 3.688e-05, 3: 4.877e-04, 4: 2.117e-04, 5: 2.914e-04, 6: 1.517e-03, 7: 2.704e-04, 8: 4.467e-04, 9: 3.350e-04]
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 boundary top    loss: 1.829e-03 | szz=pressure: 1.503e-03, syz=0: 9.919e-05, szx=0: 2.269e-04
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 boundary front  loss: 9.956e-04 | sxx=0: 5.108e-04, sxy=0: 2.344e-04, szx=0: 2.504e-04
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 boundary back   loss: 4.331e-04 | u=0: 1.887e-04, sxy=0: 4.914e-05, szx=0: 1.952e-04
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 boundary right  loss: 7.407e-04 | syy=0: 5.410e-04, sxy=0: 1.712e-04, syz=0: 2.852e-05
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 boundary left   loss: 1.644e-04 | v=0: 5.772e-05, sxy=0: 1.652e-05, syz=0: 9.013e-05
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 boundary bottom loss: 9.982e-04 | gn=0: 2.202e-04, t1=0: 3.407e-04, t2=0: 4.373e-04
+[2025-07-16 21:30:20] DEBUG - PINN - Epoch 100 TOTALS -> PDE: 3.666e-03, Bcs: 5.161e-03, LOSS: 8.827e-03
+[2025-07-16 21:30:20] DEBUG - PINN - Saved weights to log/pinn/weights/Step0_layer10_weight.pth
+[2025-07-16 21:30:20] DEBUG - PINN - Switching to L-BFGS optimization...
+[2025-07-16 21:31:54] DEBUG - PINN - Saved weights to log/pinn/weights/Step0_layer10_weight.pth
+[2025-07-16 21:31:54] DEBUG - PINN - Layer 11 top-corner displacement: [0.2508128583431244, 0.24732832610607147, -0.9975177645683289]
+[2025-07-16 21:32:10] DEBUG - PINN - Done. Elapsed time: 2.04 minutes.

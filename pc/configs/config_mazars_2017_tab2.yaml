@@ -1,0 +1,82 @@
+# configs/config_mazars_2017_tab1_cabot.yaml
+# Concrete material configuration file
+# Units: mm, N, MPa, ton, second
+
+
+# Concrete material properties
+# Jacky Mazars and Stephane Grange, 2015 (Table 1)
+concrete:
+  E: 45000           # Young's modulus (MPa)
+  nu: 0.2            # Poisson's ratio (unitless)
+
+  fc: 95.0           # Cylinder compressive strength (MPa)
+  f_ce: null         # Elastic strength limit in compression (computed if null)
+  f_cu: null         # Ultimate strength in compression (computed if null)
+  omega_ce: 0.66     # Ratio of stress at end of elastic stage to peak compressive stress
+  omega_cu: 0.1      # Ratio of failure stress to peak compressive stress
+  eps_ce: null       # Elastic strain limit in compression (computed if null)
+  eps_0c: 0.0003     # Initial strain threshold for compressive damage in μ-model (ε₀c) (computed if null)
+  eps_cp: 0.002      # Post-peak strain in compression (softening starts)
+  eps_cp2: 0.0024    # Second post-peak strain in compression (ε_cp2), used in bilinear softening
+  eps_cu: 0.01       # Ultimate strain in compression (crushing failure)
+
+  ft: 6.0           # Tensile strength (MPa)
+  f_te: null         # Elastic strength limit in tension (computed if null)
+  omega_te: 0.9      # Ratio of stress at end of tensile elastic stage to peak tensile stress
+  omega_tu: 0.01     # Ratio of failure stress to peak tensile stress
+  eps_te: null       # Elastic strain limit in tension (ε_te) (computed if null)
+  eps_tp: 0.00011    # Peak strain in tension (computed if null)
+  eps_tu: null       # Ultimate strain in tension (cracking failure, 0.003 - 0.004)
+  Ets: 0.1           # Tensile softening modulus (unitless, ~0.05–0.1)
+  # Type of tensile softening behavior after peak tensile strength.
+  #   Options:
+  #     - 'linear': Bilinear softening (straight-line decrease after peak).
+  #     - 'exponential': Exponential softening curve (default: Eurocode-type).
+  soften: 'exponential'
+  # Softening curve shape parameter for exponential softening in tension.
+  # Controls the steepness of the post-peak stress drop.
+  # Typical range: 0.7 ~ 1.0 (Eurocode recommendation).
+  alpha_ct: 0.85
+
+# Damage model parameters (Mazars-type)
+# Ac_cal, Bc_cal, At_cal, Bt_cal = 2.45, 1286, 1.0, 41086 # eps_cp = 0.0022 # ib = 1.0 
+# Ac_cal, Bc_cal, At_cal, Bt_cal = 2.72, 1414, 1.0, 41085 # eps_cp = 0.002  # ib = 1.0
+damage:
+  Ac: 1.35           # Compressive damage parameter A_c (unitless)
+  Bc: 300            # Compressive damage parameter B_c (1/strain²)
+  At: 0.9            # Tensile damage parameter A_t (unitless)
+  Bt: 20000          # Tensile damage parameter B_t (1/strain²)
+  ib: 1.0            # Tension-compression interaction factor (0~1)
+
+  # control (str): Control strategy, one of:
+  #   - 't' / 'tension'
+  #   - 'c' / 'compression'
+  #   - 'ct', 'tc', or 'compression-tension' (combined mode).
+  control: 'compression-tension'
+  
+  k: 0.75            # Shape adjustment parameter for large strain
+
+  G_ft: 150000        # Fracture energy in tension (N/mm).
+  G_fc: 60000         # Fracture energy in compression (N/mm).
+  # Damage evolution model used for computing tensile and compressive damage.
+  #   Options:
+  #     - 'debuisne': Based on the Debuisne et al. formulation.
+  #     - 'aurruda': Based on the Aurruda et al. formulation.
+  model_type: 'debuisne'
+
+# Geometry parameters
+geometry:
+  lx: 45                 # Domain length in X direction (mm)
+  ly: 45                 # Domain length in Y direction (mm)
+  lz: 15                 # Domain length in Z direction (mm)
+  n_layers: 11           # Number of printed layers (unitless)
+  ndof: 3                # Degrees of Freedom per node
+
+# Mesh parameters
+mesh:
+  mesh_size: [5, 5, 5]  # Mesh size in [X, Y, Z] directions (mm)
+
+# Contact interaction parameters
+contact:
+  epsilon: [1000000, 10000]  # Penalty stiffness: [normal (N/mm), tangential (N/mm)]
+  mu: 0.75             # Friction coefficient (unitless)

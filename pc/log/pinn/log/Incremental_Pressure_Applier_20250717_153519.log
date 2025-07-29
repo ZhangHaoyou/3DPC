@@ -1,0 +1,10 @@
+[2025-07-17 16:45:55] INFO - Incremental_Pressure_Applier - Saved load–disp history to log/pinn/load_disp.csv
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/dispx.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/dispy.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/dispz.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/sig_x.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/sig_y.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/sig_z.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/eps_x.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/eps_y.vtu
+[2025-07-17 16:46:15] DEBUG - Incremental_Pressure_Applier - Wrote log/pinn/paraview/eps_z.vtu
