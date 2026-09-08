@@ -154,5 +154,6 @@ Released under the MIT License; see [LICENSE](LICENSE).
 
 ## Contact
 
-Haoyou Zhang and Baolin Wan, Department of Civil, Construction, and Environmental Engineering,
-Marquette University, Milwaukee, WI, USA. Correspondence: baolin.wan@marquette.edu.
+Haoyou (Ethan) Zhang, Department of Civil, Construction, and Environmental Engineering,
+Marquette University, Milwaukee, WI, USA. Questions about this repository:
+haoyou.zhang@marquette.edu.
