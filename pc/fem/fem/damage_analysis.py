@@ -53,7 +53,7 @@ class MO_Evolution_Analysis:
             title=(f'Varying $A_c$ at $B_c$ = {Bc}')
         )
         Ac_min, Ac_max = np.round(Acs[[0, -1]], 2)
-        save_path = f'log/damage/mo/Acs_{Ac_min}_{Ac_max}__Bc_{Bc:.0e}.png'
+        save_path = f'log/fem/damage/mo/Acs_{Ac_min}_{Ac_max}__Bc_{Bc:.0e}.png'
         fig.savefig(save_path, dpi=300)
         plt.show()
     
@@ -88,7 +88,7 @@ class MO_Evolution_Analysis:
             title=(f'Varying $B_c$ at $A_c$ = {Ac}')
         )
         Bc_min, Bc_max = np.round(Bcs[[0, -1]], 0)
-        save_path = f'log/damage/mo/Bcs_{Bc_min}_{Bc_max}__Ac_{Ac:.2f}.png'
+        save_path = f'log/fem/damage/mo/Bcs_{Bc_min}_{Bc_max}__Ac_{Ac:.2f}.png'
         fig.savefig(save_path, dpi=300)
         plt.show()
     

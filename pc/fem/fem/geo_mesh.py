@@ -32,7 +32,7 @@ class Geometry:
                 including lx, ly, lz.
         """
         self.para = para
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info(
             "Initialized Geometry model with parameters: %s",
             vars(self.para)
@@ -140,7 +140,7 @@ class Mesh:
         self.geo = geo
         self.para = para
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info(
             "Initialized Geometry model with parameters: %s",
             vars(self.para)
@@ -321,17 +321,17 @@ class Mesh:
             element_tag += layer_elements.shape[0]
         
         # Save nodes and elements to CSV
-        np.savetxt('log/geo_mesh/nodes.csv', nodes, fmt='%.2f', delimiter=',', header='x, y, z')
-        np.savetxt('log/geo_mesh/elements.csv', elements, fmt='%d', delimiter=',', header='0, 1, 2, 3, 4, 5, 6, 7 (node tags)')
+        np.savetxt('log/fem/geo_mesh/nodes.csv', nodes, fmt='%.2f', delimiter=',', header='x, y, z')
+        np.savetxt('log/fem/geo_mesh/elements.csv', elements, fmt='%d', delimiter=',', header='0, 1, 2, 3, 4, 5, 6, 7 (node tags)')
         
         # save to vtu for visualization of ParaView
-        save_to_vtu(filename='log/paraview/geometry.vtu', nodes=nodes, elements=elements, scalar_name='Geometry')
+        save_to_vtu(filename='log/fem/paraview/geometry.vtu', nodes=nodes, elements=elements, scalar_name='Geometry')
         
         # Optional: Generate geometry plot
         if plot_geometry:
             print('Generating geometry plot...')
             fig, ax = self.geo.plot_elements_matplotlib(node_coords=nodes, ele_connectivity=elements)
-            fig.savefig('log/geo_mesh/geometry.png', dpi=300)
+            fig.savefig('log/fem/geo_mesh/geometry.png', dpi=300)
             plt.show()
         
         # Compute node counts in each direction

@@ -247,7 +247,7 @@ class Quadrilinear_Concrete(Material):
         """
         super().__init__(prop)
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Quadrilinear_Concrete model with properties: %s", vars(self.prop))
     
     def calculate_single_point_stress(self, eps: float) -> float:
@@ -309,7 +309,7 @@ class Quadrilinear_Concrete(Material):
     
     def plot_stress_strain_compression(self, eps_c_max: float, d_eps: float,
                 eps_c_min: float = 0.0,
-                save_path: str = 'log/materials/Quadrilinear_Compression.png',
+                save_path: str = 'log/fem/materials/Quadrilinear_Compression.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes]:
         """Plots the compressive stress-strain curve of the material model.
         
@@ -366,7 +366,7 @@ class Quadrilinear_Concrete(Material):
     
     def plot_stress_strain_tension(self, eps_t_max: float, d_eps: float,
                 eps_t_min: float = 0.0,
-                save_path: str = 'log/materials/Quadrilinear_Tension.png',
+                save_path: str = 'log/fem/materials/Quadrilinear_Tension.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure | plt.Axes]:
         """Plots the tensile stress-strain curve of the material model.
         
@@ -420,7 +420,7 @@ class Quadrilinear_Concrete(Material):
         return fig, ax
     
     def plot_stress_strain(self, eps_c_max: float, eps_t_max: float, d_eps: float,
-                save_path: str = 'log/materials/Quadrilinear.png',
+                save_path: str = 'log/fem/materials/Quadrilinear.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes]:
         """Plots the full stress-strain curve (compression + tension).
         
@@ -510,7 +510,7 @@ class Five_Line_Concrete(Material):
         """
         super().__init__(prop)
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Five_Line_Concrete model with properties: %s",vars(self.prop))
     
     def calculate_single_point_stress(self, eps: float) -> float:
@@ -648,7 +648,7 @@ class Five_Line_Concrete(Material):
     
     def plot_stress_strain_compression(self, eps_c_max: float, d_eps: float,
                 eps_c_min: float = 0.0,
-                save_path: str = 'log/materials/Five_Line_Compression.png',
+                save_path: str = 'log/fem/materials/Five_Line_Compression.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes]:
         """Plots the compressive stress-strain curve of the material model.
         
@@ -706,7 +706,7 @@ class Five_Line_Concrete(Material):
     
     def plot_stress_strain_tension(self, eps_t_max: float, d_eps: float,
                 eps_t_min: float = 0.0,
-                save_path: str = 'log/materials/Five_Line_Tension.png',
+                save_path: str = 'log/fem/materials/Five_Line_Tension.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure | plt.Axes]:
         """Plots the tensile stress-strain curve of the material model.
         
@@ -761,7 +761,7 @@ class Five_Line_Concrete(Material):
         return fig, ax
     
     def plot_stress_strain(self, eps_c_max: float, eps_t_max: float, d_eps: float,
-                save_path: str = 'log/materials/Five_Line.png',
+                save_path: str = 'log/fem/materials/Five_Line.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes]:
         """Plots the full stress-strain curve (compression + tension).
         

@@ -59,6 +59,7 @@ def voigt_to_tensor(strain: torch.Tensor) -> torch.Tensor:
     # stack into (N,3,3)
     return torch.stack([row0, row1, row2], dim=1)
 
+
 class Incremental_Pressure_Applier:
     """Apply incremental pressure loading to a printed concrete column using PINN + damage.
     
@@ -142,6 +143,8 @@ class Incremental_Pressure_Applier:
             load_history.append((step + 1) * pressure)
             # 9) update geometry for next increment
             self.pinn.geom.update_geometry(step=0, pred_func=self.predict)
+            # if torch.max(d) >= 0.95:
+            #     break
         # 10) dump the load-displacement history
         load_disp = np.column_stack((disp_history, load_history))
         np.savetxt('log/pinn/load_disp.csv', load_disp, delimiter=',')
@@ -226,6 +229,8 @@ class Incremental_Pressure_Applier:
             strain += pred[:, 9:15]
             eps_tensor = voigt_to_tensor(strain=strain)
             d0 = self.dmg.calculate_damage(eps=eps_tensor, d0=d0, clip=True)
+            # if torch.max(d0[:, valid_modes[control]]) >= 0.75:
+            #     break
         final_pred = torch.cat([disp_acc, stress, strain], dim=1)
         return final_pred
     
@@ -302,19 +307,19 @@ class Incremental_Pressure_Applier:
                 the combined load-displacement plot.
         """
         # --- Load experimental/comparative data ---
-        fem_data = np.loadtxt('data/FEM_load_disp.csv', delimiter=',')
+        fem_data = np.loadtxt('log/fem/load_disp.csv', delimiter=',')
         exp_data = np.loadtxt('data/Experimental_data.csv', delimiter=',', skiprows=2)
         telichko_data = np.loadtxt('data/Telichko.csv', delimiter=',', skiprows=2)
         pinn_data = np.loadtxt('log/pinn/load_disp.csv', delimiter=',')
         
-        fig, ax = plt.subplots(figsize=(9, 6))
+        fig, ax = plt.subplots(figsize=(6, 4))
         
         # Plot Experiment - black solid
-        ax.plot(exp_data[:, 0], exp_data[:, 1], label='Experiment', color='black', linestyle='-', linewidth=2)
+        # ax.plot(exp_data[:, 0], exp_data[:, 1], label='Experiment', color='black', linestyle='-', linewidth=2)
         
         # Plot Telichko - blue dashed with transparency
-        ax.plot(telichko_data[:, 0], telichko_data[:, 1], label="Telichko's Simulation", color=(0, 47/255, 167/255),
-                linestyle='--', linewidth=1.5, alpha=0.6)
+        # ax.plot(telichko_data[:, 0], telichko_data[:, 1], label="Telichko's Simulation", color=(0, 47/255, 167/255),
+        #         linestyle='--', linewidth=1.5, alpha=0.6)
         
         # Plot FEM - red dashed with transparency
         ax.plot(-fem_data[:, 0], -fem_data[:, 1], label='FEM', color=(192/255, 0, 0),
@@ -328,10 +333,10 @@ class Incremental_Pressure_Applier:
         # Axis settings
         ax.set_xlabel('Displacement (mm)', fontsize=12)
         ax.set_ylabel('Load (kN)', fontsize=12)
-        ax.set_xlim(0, 1.5)
-        ax.set_ylim(0, 70)
-        ax.set_xticks(np.arange(0, 1.5, 0.5))
-        ax.set_yticks(np.arange(0, 80, 10))
+        ax.set_xlim(0, 0.3)
+        ax.set_ylim(0, 80)
+        ax.set_xticks(np.arange(0, 0.4, 0.1))
+        ax.set_yticks(np.arange(0, 90, 20))
         ax.tick_params(labelsize=10)
         
         # Legend
@@ -342,3 +347,4 @@ class Incremental_Pressure_Applier:
         fig.savefig('log/pinn/Result.png', dpi=300)
         
         return fig, ax
+    

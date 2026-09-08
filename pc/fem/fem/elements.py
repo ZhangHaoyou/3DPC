@@ -200,7 +200,7 @@ class Hexahedral_Element(Element):
         )
         
         # Setup logger
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Hexahedral_Element.")
         self.logger.info(
             "Natural coordinates shape = %s | Custom input = %s",
@@ -662,7 +662,7 @@ class Contact_Element(Hexahedral_Element):
         self.hexa = hexa
         self.para = para
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Contact_Element with properties: %s", vars(self.para))
     
     def _sort_points_by_distance(self, p: np.ndarray, points: np.ndarray) -> np.ndarray:

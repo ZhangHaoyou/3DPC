@@ -229,7 +229,7 @@ class Damage_Evolution_Analysis:
         # Save and show
         Amin, Amax = np.round([As[0], As[-1]], 2)
         Bmin, Bmax = np.round([Bs[0], Bs[-1]], -2)
-        fig.savefig(f'log/damage/kappa_at_d_{d:.2f}_A_{Amin}_{Amax}_B_{Bmin}_{Bmax}.png', dpi=300)
+        fig.savefig(f'log/fem/damage/kappa_at_d_{d:.2f}_A_{Amin}_{Amax}_B_{Bmin}_{Bmax}.png', dpi=300)
         plt.tight_layout()
         plt.show()
 
@@ -286,7 +286,7 @@ class Damage_Evolution_Analysis:
                     )
         
         # Save and show figure
-        fig.savefig('log/damage/uniaxial_compressive_equivalent_strain.png', dpi=300)
+        fig.savefig('log/fem/damage/uniaxial_compressive_equivalent_strain.png', dpi=300)
         plt.show()
     
     def show_uniaxial_tensile_equivalent_strain(self,
@@ -339,7 +339,7 @@ class Damage_Evolution_Analysis:
         )
 
         # Save and show
-        fig.savefig('log/damage/uniaxial_tensile_equivalent_strain.png', dpi=300)
+        fig.savefig('log/fem/damage/uniaxial_tensile_equivalent_strain.png', dpi=300)
         plt.show()
 
         return fig, ax
@@ -382,7 +382,7 @@ class Damage_Evolution_Analysis:
         
         # Save and display
         Amin, Amax = np.round(As[[0, -1]], 2)
-        save_path = f'log/damage/As_{Amin}_{Amax}__B_{B:.0e}.png'
+        save_path = f'log/fem/damage/As_{Amin}_{Amax}__B_{B:.0e}.png'
         fig.savefig(save_path, dpi=300)
         plt.show()
         
@@ -426,7 +426,7 @@ class Damage_Evolution_Analysis:
         
         # Save and display
         Bmin, Bmax = np.round(Bs[[0, -1]], 2)
-        save_path = f'log/damage/Bs_{Bmin}_{Bmax}__A_{A:.2f}.png'
+        save_path = f'log/fem/damage/Bs_{Bmin}_{Bmax}__A_{A:.2f}.png'
         fig.savefig(save_path, dpi=300)
         plt.show()
         
@@ -483,7 +483,7 @@ class Damage_Evolution_Analysis:
         # Save and display
         Amin, Amax = np.round(As[[0, -1]], 2)
         Bmin, Bmax = np.round(Bs[[0, -1]], 0)
-        save_path = f'log/damage/As_{Amin}_{Amax}__Bs_{Bmin}_{Bmax}.png'
+        save_path = f'log/fem/damage/As_{Amin}_{Amax}__Bs_{Bmin}_{Bmax}.png'
         fig.savefig(save_path, dpi=300)
         plt.show()
         

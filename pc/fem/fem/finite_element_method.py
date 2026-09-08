@@ -1,6 +1,7 @@
 # fem/fem/finite_element_method.py
 
 
+import os
 import numpy as np
 import matplotlib
 import platform
@@ -49,8 +50,15 @@ class Finite_Element_Method:
         self.mesh = mesh
         self.dmg = dmg
         
+        os.makedirs(f'log/fem/log', exist_ok=True)
+        os.makedirs(f'log/fem/kfu', exist_ok=True)
+        os.makedirs(f'log/fem/geo_mesh', exist_ok=True)
+        os.makedirs(f'log/fem/paraview', exist_ok=True)
+        os.makedirs(f'log/fem/materials', exist_ok=True)
+        os.makedirs(f'log/fem/damage', exist_ok=True)
+        
         # Initialize logger
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Finite_Element_Method with material: %s, mesh: %s, damage model: %s",
                         type(mat).__name__, type(mesh).__name__, type(dmg).__name__)
         
@@ -113,7 +121,7 @@ class Finite_Element_Method:
             plot_geometry=plot_geometry
         )
         
-        save_to_vtu('log/paraview/geometry.vtu', nodes, elements, scalar_name='Geometry')
+        save_to_vtu('log/fem/paraview/geometry.vtu', nodes, elements, scalar_name='Geometry')
         
         # Save generated mesh to instance variables
         self.nodes = nodes
@@ -334,7 +342,8 @@ class Finite_Element_Method:
         print('\n📌 ', msg)
         self.logger.debug(msg)
     
-    def log_extreme_damage_strain_info(self, d: np.ndarray, eps: np.ndarray, find_largest: bool = True) -> np.ndarray:
+    def log_extreme_damage_strain_info(self, d: np.ndarray, eps: np.ndarray, find_largest: bool = True
+            ) -> Tuple[np.ndarray, list]:
         """
         Logs the strain vector at the Gauss point with the highest or lowest damage 
         according to the specified damage control mode.
@@ -348,6 +357,7 @@ class Finite_Element_Method:
                                 
         Returns:
             np.ndarray: Strain vector (6,) at the selected Gauss point.
+            list: list of combined (tc), tension (t), compression (c)
         """
         control_mode = self.dmg.para.control.strip().lower()
         control_to_index = {
@@ -388,7 +398,7 @@ class Finite_Element_Method:
         print('\n📌 ', msg)
         self.logger.debug(msg)
         
-        return eps_voigt
+        return eps_voigt, [d_tc, d_t, d_c]
     
     def analyze_contacts(self, contact_para: Contact_Parameter, pressure_per_step: float = -1.0, n_steps: int = 1,
                     move_vertically: bool = False, B_bar: bool = True) -> None:
@@ -444,7 +454,7 @@ class Finite_Element_Method:
         telichko_data = np.loadtxt('data/Telichko.csv', delimiter=',', skiprows=2)
         
         # Initialize figure and axis
-        fig, ax = plt.subplots(figsize=(9, 6))
+        fig, ax = plt.subplots(figsize=(6, 4))
         
         # Plot reference curves
         ax.plot(exp_data[:, 0], exp_data[:, 1], label='Experiment', color='black', linestyle='-', linewidth=2)
@@ -456,12 +466,12 @@ class Finite_Element_Method:
         # Configure plot appearance
         ax.set_xlabel('Displacement (mm)', fontsize=12)
         ax.set_ylabel('Load (kN)', fontsize=12)
-        ax.set_xlim(0, 1.5)
-        ax.set_ylim(0, 70)
-        ax.set_xticks(np.arange(0, 1.5, 0.5))
-        ax.set_yticks(np.arange(0, 80, 10))
+        ax.set_xlim(0, 0.3)
+        ax.set_ylim(0, 80)
+        ax.set_xticks(np.arange(0, 0.4, 0.1))
+        ax.set_yticks(np.arange(0, 90, 20))
         ax.tick_params(labelsize=12)
-        ax.legend(fontsize=14, loc='upper left')
+        ax.legend(fontsize=10, loc='upper left')
         
         # Add parameter info in the bottom right corner
         param_text = (f"$A_{{\\mathrm{{c}}}}$ = {dmg.para.Ac:.2f}, $B_{{\\mathrm{{c}}}}$ = {dmg.para.Bc:.0f}\n"
@@ -518,7 +528,7 @@ class Finite_Element_Method:
             
             self.log_loading_node_displacements(current_u=current_u)
             self.log_maximum_displacement(u=np.abs(current_u), nodes=current_nodes)
-            eps_vogit = self.log_extreme_damage_strain_info(d=hexa.current_damage, eps=hexa.current_eps, find_largest=True)
+            eps_vogit, d_maxs = self.log_extreme_damage_strain_info(d=hexa.current_damage, eps=hexa.current_eps, find_largest=True)
             self.log_extreme_damage_strain_info(d=hexa.current_damage, eps=hexa.current_eps, find_largest=False)
             recorder_eps.append(eps_vogit)
             
@@ -559,16 +569,33 @@ class Finite_Element_Method:
                 self.logger.info(end_msg)
                 break
             
+            control_mode = self.dmg.para.control.strip().lower()
+            control_to_index = {
+                'ct': 0, 'tc': 0, 'compression-tension': 0, 'tension-compression': 0,
+                't': 1, 'tension': 1,
+                'c': 2, 'compression': 2,
+            }
+            d_max = d_maxs[control_to_index[control_mode]]
+            # d_max = max(d_maxs)
+            # if max_current_damage >= 0.8:
+            if d_max >= 0.8:
+                end_msg = f"Damage exceeding 0.8 at loading step {step + 1} / {n_steps}"
+                print('\n🎯 ', end_msg)
+                self.logger.info(end_msg)
+                break
+        
+        plt.close(fig)
+        
         # Step 6: Save final results
-        np.savetxt('log/kfu/u.csv', current_u, delimiter=',')
-        np.savetxt('log/kfu/k_final.csv', global_k_final, delimiter=',')
-        np.savetxt('log/kfu/eps_voigt.csv', np.array(recorder_eps), delimiter=',')
+        np.savetxt('log/fem/kfu/u.csv', current_u, delimiter=',')
+        np.savetxt('log/fem/kfu/k_final.csv', global_k_final, delimiter=',')
+        np.savetxt('log/fem/kfu/eps_voigt.csv', np.array(recorder_eps), delimiter=',')
         
         # Prepare and save load-displacement curve
         recorder_disp = np.array(recorder_disp)
         recorder_load = np.array(recorder_load) / 1000.0  # Convert N to kN
         load_disp = np.column_stack((recorder_disp, recorder_load))
-        np.savetxt('log/load_disp.csv', load_disp, delimiter=',', header='disp (mm), load (kN)')
+        np.savetxt('log/fem/load_disp.csv', load_disp, delimiter=',', header='disp (mm), load (kN)')
         
         # Store results in object
         self.bc = bc
@@ -581,7 +608,7 @@ class Finite_Element_Method:
         exp_data = np.loadtxt('data/Experimental_data.csv', delimiter=',', skiprows=2)
         telichko_data = np.loadtxt('data/Telichko.csv', delimiter=',', skiprows=2)
         
-        fig, ax = plt.subplots(figsize=(9, 6))
+        fig, ax = plt.subplots(figsize=(6, 4))
         
         # Plot Experiment - black solid
         ax.plot(exp_data[:, 0], exp_data[:, 1], label='Experiment', color='black', linestyle='-', linewidth=2)
@@ -604,18 +631,18 @@ class Finite_Element_Method:
         # Axis settings
         ax.set_xlabel('Displacement (mm)', fontsize=16)
         ax.set_ylabel('Load (kN)', fontsize=16)
-        ax.set_xlim(0, 1.5)
-        ax.set_ylim(0, 70)
-        ax.set_xticks(np.arange(0, 1.5, 0.5))
-        ax.set_yticks(np.arange(0, 80, 10))
+        ax.set_xlim(0, 0.3)
+        ax.set_ylim(0, 80)
+        ax.set_xticks(np.arange(0, 0.4, 0.1))
+        ax.set_yticks(np.arange(0, 90, 20))
         ax.tick_params(labelsize=12)
         
         # Legend
-        ax.legend(fontsize=14, loc='upper left')
+        ax.legend(fontsize=10, loc='upper left')
         
         # Save figure
         fig.tight_layout()
-        fig.savefig('log/Result.png', dpi=300)
+        fig.savefig('log/fem/Result.png', dpi=300)
         
         # calculate stress and strain
         dof = 3
@@ -632,10 +659,10 @@ class Finite_Element_Method:
         
         equivalent_plastic_strain = hexa.calculate_eps_plastic_eq_ansys(eps=strain)
         
-        np.savetxt('log/kfu/stress.csv', stress.T, delimiter=',', header='SX, SY, SZ, SXY, SYZ, SXZ')
-        np.savetxt('log/kfu/strain.csv', strain.T, delimiter=',', header='EX, EY, EZ, EXY, EYZ, EXZ')
-        np.savetxt('log/kfu/equivalent_plastic_strain.csv', equivalent_plastic_strain, delimiter=',', header='EPS')
-        np.savetxt('log/kfu/final_node_coords.csv', final_node_coords, delimiter=',')
+        np.savetxt('log/fem/kfu/stress.csv', stress.T, delimiter=',', header='SX, SY, SZ, SXY, SYZ, SXZ')
+        np.savetxt('log/fem/kfu/strain.csv', strain.T, delimiter=',', header='EX, EY, EZ, EXY, EYZ, EXZ')
+        np.savetxt('log/fem/kfu/equivalent_plastic_strain.csv', equivalent_plastic_strain, delimiter=',', header='EPS')
+        np.savetxt('log/fem/kfu/final_node_coords.csv', final_node_coords, delimiter=',')
         
     def post_process(self, show: bool = True) -> None:
         """Performs post-processing tasks after finite element analysis.
@@ -660,13 +687,13 @@ class Finite_Element_Method:
         contact = self.contact
         
         # --- Load numerical results from disk ---
-        elements = np.loadtxt('log/geo_mesh/elements.csv', delimiter=',').astype(int)
-        stress = np.loadtxt('log/kfu/stress.csv', delimiter=',').T          # shape: (6, num_gauss_pts)
-        strain = np.loadtxt('log/kfu/strain.csv', delimiter=',').T
-        eps_p_eq = np.loadtxt('log/kfu/equivalent_plastic_strain.csv', delimiter=',')
+        elements = np.loadtxt('log/fem/geo_mesh/elements.csv', delimiter=',').astype(int)
+        stress = np.loadtxt('log/fem/kfu/stress.csv', delimiter=',').T          # shape: (6, num_gauss_pts)
+        strain = np.loadtxt('log/fem/kfu/strain.csv', delimiter=',').T
+        eps_p_eq = np.loadtxt('log/fem/kfu/equivalent_plastic_strain.csv', delimiter=',')
         
-        final_coords = np.loadtxt('log/kfu/final_node_coords.csv', delimiter=',')
-        total_u = np.loadtxt('log/kfu/u.csv', delimiter=',')
+        final_coords = np.loadtxt('log/fem/kfu/final_node_coords.csv', delimiter=',')
+        total_u = np.loadtxt('log/fem/kfu/u.csv', delimiter=',')
         disp = total_u.reshape(final_coords.shape)
         ux, uy, uz = disp[:, 0], disp[:, 1], disp[:, 2]
         
@@ -682,28 +709,28 @@ class Finite_Element_Method:
             
         print('Saving a hexahedral mesh and associated scalar data to a VTU file for visualization in ParaView.')
         
-        save_to_vtu('log/paraview/deformed_geometry.vtu', final_coords, elements, scalar_name='Deformed Geometry')
+        save_to_vtu('log/fem/paraview/deformed_geometry.vtu', final_coords, elements, scalar_name='Deformed Geometry')
         
-        save_to_vtu('log/paraview/disp1.vtu', final_coords, elements, scalar=ux, scalar_name='Displacement_X')
-        save_to_vtu('log/paraview/disp2.vtu', final_coords, elements, scalar=uy, scalar_name='Displacement_Y')
-        save_to_vtu('log/paraview/disp3.vtu', final_coords, elements, scalar=uz, scalar_name='Displacement_Z')
+        save_to_vtu('log/fem/paraview/disp1.vtu', final_coords, elements, scalar=ux, scalar_name='Displacement_X')
+        save_to_vtu('log/fem/paraview/disp2.vtu', final_coords, elements, scalar=uy, scalar_name='Displacement_Y')
+        save_to_vtu('log/fem/paraview/disp3.vtu', final_coords, elements, scalar=uz, scalar_name='Displacement_Z')
         
-        save_to_vtu('log/paraview/stress1.vtu', final_coords, elements, scalar=sx, scalar_name='Stress_X')
-        save_to_vtu('log/paraview/stress2.vtu', final_coords, elements, scalar=sy, scalar_name='Stress_Y')
-        save_to_vtu('log/paraview/stress3.vtu', final_coords, elements, scalar=sz, scalar_name='Stress_Z')
+        save_to_vtu('log/fem/paraview/stress1.vtu', final_coords, elements, scalar=sx, scalar_name='Stress_X')
+        save_to_vtu('log/fem/paraview/stress2.vtu', final_coords, elements, scalar=sy, scalar_name='Stress_Y')
+        save_to_vtu('log/fem/paraview/stress3.vtu', final_coords, elements, scalar=sz, scalar_name='Stress_Z')
         
-        save_to_vtu('log/paraview/strain1.vtu', final_coords, elements, scalar=ex, scalar_name='Strain_X')
-        save_to_vtu('log/paraview/strain2.vtu', final_coords, elements, scalar=ey, scalar_name='Strain_Y')
-        save_to_vtu('log/paraview/strain3.vtu', final_coords, elements, scalar=ez, scalar_name='Strain_Z')
-        save_to_vtu('log/paraview/equivalent_strain.vtu', final_coords, elements,
+        save_to_vtu('log/fem/paraview/strain1.vtu', final_coords, elements, scalar=ex, scalar_name='Strain_X')
+        save_to_vtu('log/fem/paraview/strain2.vtu', final_coords, elements, scalar=ey, scalar_name='Strain_Y')
+        save_to_vtu('log/fem/paraview/strain3.vtu', final_coords, elements, scalar=ez, scalar_name='Strain_Z')
+        save_to_vtu('log/fem/paraview/equivalent_strain.vtu', final_coords, elements,
                     scalar=eps_p, scalar_name='Equivalent_Strain')
         
         # --- Load experimental/comparative data ---
-        load_disp = np.loadtxt('log/load_disp.csv', delimiter=',')
+        load_disp = np.loadtxt('log/fem/load_disp.csv', delimiter=',')
         exp_data = np.loadtxt('data/Experimental_data.csv', delimiter=',', skiprows=2)
         telichko_data = np.loadtxt('data/Telichko.csv', delimiter=',', skiprows=2)
         
-        fig, ax = plt.subplots(figsize=(9, 6))
+        fig, ax = plt.subplots(figsize=(6, 4))
         
         # Plot Experiment - black solid
         ax.plot(exp_data[:, 0], exp_data[:, 1], label='Experiment', color='black', linestyle='-', linewidth=2)
@@ -726,18 +753,18 @@ class Finite_Element_Method:
         # Axis settings
         ax.set_xlabel('Displacement (mm)', fontsize=16)
         ax.set_ylabel('Load (kN)', fontsize=16)
-        ax.set_xlim(0, 1.5)
-        ax.set_ylim(0, 70)
-        ax.set_xticks(np.arange(0, 1.5, 0.5))
-        ax.set_yticks(np.arange(0, 80, 10))
+        ax.set_xlim(0, 0.3)
+        ax.set_ylim(0, 80)
+        ax.set_xticks(np.arange(0, 0.4, 0.1))
+        ax.set_yticks(np.arange(0, 90, 20))
         ax.tick_params(labelsize=12)
         
         # Legend
-        ax.legend(fontsize=14, loc='upper left')
+        ax.legend(fontsize=10, loc='upper left')
         
         # Save figure
         fig.tight_layout()
-        fig.savefig('log/Result.png', dpi=300)
+        fig.savefig('log/fem/Result.png', dpi=300)
         
         if show:
             plt.show()

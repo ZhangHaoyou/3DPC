@@ -26,7 +26,7 @@ class Solver:
         
         Sets up a logger specific to the Solver class for tracking solver operations.
         """
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Solver initialized and ready for execution.")
         self.coverage = True
     

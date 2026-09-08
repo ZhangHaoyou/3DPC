@@ -19,6 +19,9 @@ from dl.pinn.contact_boundary_conditions import Contact_Boundary_Condition
 from fem.utils.log_config import setup_logger
 
 
+def count_parameters(model: nn.Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 class PINN_Graph:
     """Physics-informed neural network solver for layered contact elasticity.
     
@@ -62,19 +65,22 @@ class PINN_Graph:
         self.geom = geom
         self.num_domain = num_domain
         self.num_bc = num_bc
-        self.num_points = (num_domain**3 + num_bc**2 * 8)* geom.n_layers
+        self.num_points = (num_domain**3 + num_bc**2 * 8) * geom.n_layers
         
         self.proj = proj
         
         os.makedirs(f'log/{self.proj}/log', exist_ok=True)
         os.makedirs(f'log/{self.proj}/weights', exist_ok=True)
         os.makedirs(f'log/{self.proj}/paraview', exist_ok=True)
+        os.makedirs(f'log/{self.proj}/loss', exist_ok=True)
         self.logger = setup_logger(name=self.__class__.__name__, log_dir=f'log/{self.proj}/log')
         
         self.logger.debug(f"Using device: {device}")
         self.logger.info("Geometry parameters: lx=%.3f, ly=%.3f, lz=%.3f", self.geom.lx, self.geom.ly, self.geom.lz)
         self.logger.info("NN architecture layers: %s", net)  # or print net layers list
         self.logger.info("PDE material: E=%.3f, nu=%.3f", pde.E, pde.nu)
+        
+        self.count_parameters()
     
     def generate_points(self, layer: int, method: str, seed: int, k: int) -> None:
         """Generate and store collocation and boundary graphs for a given layer.
@@ -121,6 +127,8 @@ class PINN_Graph:
         self.left_points = geo.generate_left_graph(
                 N=self.num_bc, method=method, seed=seed, k=k).to(self.device)
         self.left_points.x = self.left_points.x.requires_grad_(True)
+        
+        
         self.domain_points = self.geom.combine_graphs(graph_list=[self.inside_points, self.bottom_points, self.top_points,
                 self.front_points, self.back_points, self.right_points, self.left_points])
         # --- logging ---
@@ -141,7 +149,22 @@ class PINN_Graph:
             self.logger.debug("Back points shape:   %s", tuple(self.back_points.x.shape))
             self.logger.debug("Right points shape:  %s", tuple(self.right_points.x.shape))
             self.logger.debug("Left points shape:   %s", tuple(self.left_points.x.shape))
+            
+            self.logger.debug("Inside edge shape: %s", tuple(self.inside_points.edge_index.shape))
+            self.logger.debug("Top edge shape:    %s", tuple(self.top_points.edge_index.shape))
+            self.logger.debug("Bottom edge shape: %s", tuple(self.bottom_points.edge_index.shape))
+            self.logger.debug("Front edge shape:  %s", tuple(self.front_points.edge_index.shape))
+            self.logger.debug("Back edge shape:   %s", tuple(self.back_points.edge_index.shape))
+            self.logger.debug("Right edge shape:  %s", tuple(self.right_points.edge_index.shape))
+            self.logger.debug("Left edge shape:   %s", tuple(self.left_points.edge_index.shape))
     
+    def add_pressure_to_input_nodes(self, points: Data, pressure: float) -> Data:
+        bc = torch.tensor([0.0, 0.0, pressure])
+        bcs = bc.repeat((points.x.shape[0], 1))
+        points.x = torch.cat((points.x, bcs), dim=1)
+        points.x.require_grad_(True)
+        return points
+        
     def calculate_loss(self, epoch: int, bc: Contact_Boundary_Condition) -> torch.Tensor:
         """Compute the total loss combining PDE residuals and boundary conditions.
         
@@ -160,6 +183,7 @@ class PINN_Graph:
         """
         loss_fn = nn.MSELoss()
         # PDE loss
+        # domain_points = self.add_pressure_to_input_nodes(points=self.domain_points, pressure=bc.pressure)
         outputs_dom = self.net(x=self.domain_points.x, edge_index=self.domain_points.edge_index)  
         pde_terms = self.pde.pde_mixed_central_diff(x=self.domain_points.x,
                 edge_index=self.domain_points.edge_index, outputs=outputs_dom)
@@ -185,6 +209,7 @@ class PINN_Graph:
         }
         loss_boundaries = {}
         for name, pts in boundary_sets.items():
+            # pts = self.add_pressure_to_input_nodes(points=pts, pressure=bc.pressure)
             out = self.net(x=pts.x, edge_index=pts.edge_index)  # [N, 5]
             u, v, w, *_ = out.unbind(dim=1)
             sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_yz, sigma_zx = self.pde.calculate_stress_tensor(x=pts.x, edge_index=pts.edge_index)
@@ -244,6 +269,7 @@ class PINN_Graph:
                 "Epoch %d TOTALS -> PDE: %.3e, Bcs: %.3e, LOSS: %.3e",
                 epoch, loss_pde.item(), loss_bcs.item(), loss.item()
             )
+        self.loss_recorder.append([epoch, loss_pde.item(), loss_bcs.item(), loss.item()])
         return loss
     
     def train_using_Adam(self, layer: int, num_epochs: int, bc: Contact_Boundary_Condition,
@@ -353,12 +379,13 @@ class PINN_Graph:
         
         for i in range(self.geom.n_layers):
             # self.net.initiate_weights()
+            self.loss_recorder = []
             layer = self.geom.n_layers - (i + 1)
             bc = Contact_Boundary_Condition(geom=self.geom.standard_layers[layer], pressure=pressure)
             self.logger.info("Contact BC pressure: %.3f from layer %d", bc.pressure, layer+1)
             
             self.train_using_Adam(layer=layer, num_epochs=num_epochs, bc=bc, step=step)
-            self.train_using_LBFGS(layer=layer, num_epochs=1, bc=bc, step=step)
+            # self.train_using_LBFGS(layer=layer, num_epochs=1, bc=bc, step=step)
             self.net.eval()
             with torch.no_grad():
                 sig_z = self.net(x=self.bottom_points.x, edge_index=self.bottom_points.edge_index)[:, 5]
@@ -367,6 +394,9 @@ class PINN_Graph:
             with torch.no_grad():
                 disp1 = self.net(x=data_top.x, edge_index=data_top.edge_index)[-1, :3]
                 self.logger.debug("Layer %d top-corner displacement: %s", layer + 1, disp1.tolist())
+            
+            np.savetxt(f'log/graph/loss/layer{i}.csv', np.array(self.loss_recorder), delimiter=',',
+                    header='epoch, loss_pde, loss_bcs, total_loss')
     
     def predict_vertical_displacements(self, step: int) -> List[float]:
         """Compute the mean vertical displacement at the top of each layer.
@@ -559,4 +589,9 @@ class PINN_Graph:
             vtu_path = f"log/{self.proj}/paraview/{name}.vtu"
             meshio.write(vtu_path, vtk)
             self.logger.debug(f"Wrote {vtu_path}")
+    
+    def count_parameters(self) -> int:
+        num_parameters = count_parameters(model=self.net)
+        self.logger.info(f'Number of parameters: {num_parameters}')
+        return num_parameters
 

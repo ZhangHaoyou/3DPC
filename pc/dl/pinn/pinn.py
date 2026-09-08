@@ -17,6 +17,9 @@ from dl.pinn.contact_boundary_conditions import Contact_Boundary_Condition
 from fem.utils.log_config import setup_logger
 
 
+def count_parameters(model: nn.Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 class PINN:
     """Physics-informed neural network solver for layered contact elasticity.
     
@@ -62,12 +65,15 @@ class PINN:
         os.makedirs('log/pinn/log', exist_ok=True)
         os.makedirs('log/pinn/weights', exist_ok=True)
         os.makedirs('log/pinn/paraview', exist_ok=True)
+        os.makedirs('log/pinn/loss', exist_ok=True)
         self.logger = setup_logger(name=self.__class__.__name__, log_dir='log/pinn/log')
         
         self.logger.debug(f"Using device: {device}")
         self.logger.info("Geometry parameters: lx=%.3f, ly=%.3f, lz=%.3f", self.geom.lx, self.geom.ly, self.geom.lz)
         self.logger.info("NN architecture layers: %s", net)  # or print net layers list
         self.logger.info("PDE material: E=%.3f, nu=%.3f", pde.E, pde.nu)
+        
+        self.count_parameters()
     
     def generate_points(self, layer: int, method: str, seed: int):
         """Generate collocation and boundary point sets for a given layer.
@@ -226,6 +232,7 @@ class PINN:
                 "Epoch %d TOTALS -> PDE: %.3e, Bcs: %.3e, LOSS: %.3e",
                 epoch, loss_pde.item(), loss_bcs.item(), loss.item()
             )
+        self.loss_recorder.append([epoch, loss_pde.item(), loss_bcs.item(), loss.item()])
         return loss
     
     def train_using_Adam(self, layer: int, num_epochs: int, bc: Contact_Boundary_Condition,
@@ -261,6 +268,10 @@ class PINN:
             loss = self.calculate_loss(epoch=epoch, bc=bc)
             loss.backward()
             optimizer.step()
+            # early_stopping(loss)
+            # if early_stopping.early_stop:
+            #     self.logger.debug("Early stopping!")
+            #     break
             
             if epoch % 1_000_000 == 0:
                 torch.save(self.net.state_dict(),
@@ -291,7 +302,7 @@ class PINN:
             - Logs progress at the start and end.
         """
         optimizer = torch.optim.LBFGS(self.net.parameters(),
-                lr=1, max_iter=50000, max_eval=50000, history_size=50,
+                lr=1, max_iter=50, max_eval=50000, history_size=50,
                 tolerance_grad=1e-7, tolerance_change=1e-9, line_search_fn='strong_wolfe')
         self.logger.debug(f"Switching to L-BFGS optimization...")
         for epoch in range(1, num_epochs + 1):
@@ -327,13 +338,14 @@ class PINN:
             - Overwrites `pressure` each iteration with the mean szz at the bottom.
         """
         for i in range(self.geom.n_layers):
+            self.loss_recorder = []
             self.net.initiate_weights()
             layer = self.geom.n_layers - (i + 1)
             bc = Contact_Boundary_Condition(geom=self.geom.standard_layers[layer], pressure=pressure)
             self.logger.info("Contact BC pressure: %.3f from layer %d", bc.pressure, layer+1)
             
             self.train_using_Adam(layer=layer, num_epochs=num_epochs, bc=bc, step=step)
-            self.train_using_LBFGS(layer=layer, num_epochs=1, bc=bc, step=step)
+            # self.train_using_LBFGS(layer=layer, num_epochs=1, bc=bc, step=step)
             self.net.eval()
             with torch.no_grad():
                 sig_z = self.net(self.bottom_points)[:, 5]
@@ -342,6 +354,9 @@ class PINN:
             with torch.no_grad():
                 disp1 = self.net(torch.tensor([1.0, 1.0, 1.0]).to(self.geom.device))[:3]
                 self.logger.debug("Layer %d top-corner displacement: %s", layer + 1, disp1.tolist())
+            
+            np.savetxt(f'log/pinn/loss/layer{i}.csv', np.array(self.loss_recorder), delimiter=',',
+                    header='epoch, loss_pde, loss_bcs, total_loss')
     
     def predict_vertical_displacements(self, step: int) -> List[float]:
         """Compute the mean vertical displacement at the top of each layer.
@@ -529,3 +544,8 @@ class PINN:
             vtu_path = f"log/pinn/paraview/{name}.vtu"
             meshio.write(vtu_path, vtk)
             self.logger.debug(f"Wrote {vtu_path}")
+    
+    def count_parameters(self) -> int:
+        num_parameters = count_parameters(model=self.net)
+        self.logger.info(f'Number of parameters: {num_parameters}')
+        return num_parameters

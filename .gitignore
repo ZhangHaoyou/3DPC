@@ -1,0 +1,16 @@
+# Local research material, not part of the public code release
+/contact_elements/
+/docs_ASE_final/
+/docs_ASE_in_revision/
+/docs_Structures/
+/presentation/
+/pc_fem/
+/pc_fem2/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editor and tooling
+.vscode/
+.VSCodeCounter/

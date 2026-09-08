@@ -205,7 +205,7 @@ class Damage(ABC):
         pass
     
     def plot_damage_evolution_from_elastic_eps(self, clip: bool = True,
-                save_path: str ='log/damage/mo/Elastic_eps_damage_evolution.png',
+                save_path: str ='log/fem/damage/mo/Elastic_eps_damage_evolution.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes]:
         """
         Plots damage evolution against compression strain using precomputed elastic strain data.
@@ -223,7 +223,7 @@ class Damage(ABC):
         Returns:
             Tuple[plt.Figure, plt.Axes]: Matplotlib figure and axes objects.
         """
-        filepath = 'log/kfu/elastic_eps_voigt.csv'
+        filepath = 'log/fem/kfu/elastic_eps_voigt.csv'
         
         try:
             eps_array = np.loadtxt(filepath, delimiter=',')
@@ -432,7 +432,7 @@ class Mazars_Original_Damage(Damage):
         super().__init__(mat, para)
         self.mat = mat
         self.para = para
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info(
             "Initialized Mazars Original Damage with parameters: %s",
             vars(self.para)
@@ -692,7 +692,7 @@ class Mazars_Original_Damage(Damage):
         Returns:
             np.ndarray: Array of damage values, shape (n_samples, 3)
         """
-        filepath = 'log/kfu/elastic_eps_voigt.csv'
+        filepath = 'log/fem/kfu/elastic_eps_voigt.csv'
         try:
             eps_array = np.loadtxt(filepath, delimiter=',')
         except Exception as e:
@@ -778,7 +778,7 @@ class Mazars_Original_Damage(Damage):
         )
         
         # Save and close
-        fig.savefig(f"log/damage/MO_parameters_fitted_from_stress_{mode}.png", dpi=300)
+        fig.savefig(f"log/fem/damage/MO_parameters_fitted_from_stress_{mode}.png", dpi=300)
         plt.show()
         plt.close(fig)
         
@@ -786,7 +786,7 @@ class Mazars_Original_Damage(Damage):
     
     def plot_uniaxial_tension_damage_evolution(self, eps_t_max: float, d_eps: float, At: float, Bt: float,
                 eps_t_min: float = 0.0,
-                save_path: str ='log/damage/MO_uniaxial_tension_damage_evolution.png',
+                save_path: str ='log/fem/damage/MO_uniaxial_tension_damage_evolution.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes, plt.Axes]:
         """Plots uniaxial tensile stress-strain curve with damage evolution.
         
@@ -838,7 +838,7 @@ class Mazars_Original_Damage(Damage):
     
     def plot_uniaxial_compression_damage_evolution(self, eps_c_max: float, d_eps: float, Ac: float, Bc: float,
                 eps_c_min: float = 0.0,
-                save_path: str ='log/damage/MO_uniaxial_compression_damage_evolution.png',
+                save_path: str ='log/fem/damage/MO_uniaxial_compression_damage_evolution.png',
                 show: bool = True, close: bool = True) -> Tuple[plt.Figure, plt.Axes, plt.Axes]:
         """Plots uniaxial compression stress-strain curve with damage evolution.
         
@@ -1008,7 +1008,7 @@ class Mazars_Original_Damage_Torch(Damage):
         super().__init__(mat, para)
         self.mat = mat
         self.para = para
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info(
             "Initialized Mazars Original Damage PyTorch with parameters: %s",
             vars(self.para)
@@ -1337,7 +1337,7 @@ class Mu_Damage(Damage):
         self.mat = mat
         self.para = para
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Mu-Damage model with parameters: %s", vars(self.para))
     
     def calculate_r(self, d0: float, D: np.ndarray, eps: np.ndarray) -> float:
@@ -1774,7 +1774,7 @@ class Mu_Damage(Damage):
         )
         
         # Save and close
-        fig.savefig(f"log/damage/Mu_parameters_fitted_from_stress_{mode}.png", dpi=300)
+        fig.savefig(f"log/fem/damage/Mu_parameters_fitted_from_stress_{mode}.png", dpi=300)
         plt.show()
         plt.close(fig)
         
@@ -1783,7 +1783,7 @@ class Mu_Damage(Damage):
     def plot_uniaxial_compression_damage_evolution(self, eps_c_max: float, d_eps: float, Ac: Optional[float] = None, Bc: Optional[float] = None,
             At: Optional[float] = None, Bt: Optional[float] = None,
             eps_c_min: float = 0.0,
-            save_path: str ='log/damage/MU_uniaxial_compression_damage_evolution.png',
+            save_path: str ='log/fem/damage/MU_uniaxial_compression_damage_evolution.png',
             show: bool = True, close: bool = True, clip: bool = False) -> Tuple[plt.Figure, plt.Axes, plt.Axes]:
         """Plots the uniaxial compressive stress-strain curve overlaid with the damage evolution curve.
         
@@ -1843,7 +1843,7 @@ class Mu_Damage(Damage):
     def plot_uniaxial_tension_damage_evolution(self, eps_t_max: float, d_eps: float, Ac: Optional[float] = None, Bc: Optional[float] = None,
             At: Optional[float] = None, Bt: Optional[float] = None,
             eps_t_min: float = 0.0,
-            save_path: str ='log/damage/MU_uniaxial_tension_damage_evolution.png',
+            save_path: str ='log/fem/damage/MU_uniaxial_tension_damage_evolution.png',
             show: bool = True, close: bool = True, clip: bool = False) -> Tuple[plt.Figure, plt.Axes, plt.Axes]:
         """Plots the uniaxial tensile stress-strain curve with overlaid damage evolution curve.
         
@@ -2020,7 +2020,7 @@ class Modified_Mazars_Damage(Damage):
         self.mesh = mesh
         self.para = para
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info("Initialized Modified_Mazars_Damage model with parameters: %s", vars(self.para))
     
     def calculate_dt_Debuisne(self, eps_eq: np.ndarray, eps_d0: float, G_ft: float, h: float) -> float:
@@ -2468,7 +2468,7 @@ class Modified_Mazars_Damage(Damage):
     
     def plot_uniaxial_compression_damage_evolution(self, eps_c_max: float, d_eps: float,
             eps_c_min: float = 0.0,
-            save_path: str ='log/damage/MM_uniaxial_compression_damage_evolution.png',
+            save_path: str ='log/fem/damage/MM_uniaxial_compression_damage_evolution.png',
             show: bool = True, close: bool = True, clip: bool = False) -> Tuple[plt.Figure, plt.Axes, plt.Axes]:
         """Plots uniaxial compression stress-strain and corresponding damage evolution curves.
         
@@ -2521,7 +2521,7 @@ class Modified_Mazars_Damage(Damage):
     
     def plot_uniaxial_tension_damage_evolution(self, eps_t_max: float, d_eps: float,
             eps_t_min: float = 0.0,
-            save_path: str ='log/damage/MM_uniaxial_tension_damage_evolution.png',
+            save_path: str ='log/fem/damage/MM_uniaxial_tension_damage_evolution.png',
             show: bool = True, close: bool = True, clip: bool = False) -> Tuple[plt.Figure, plt.Axes, plt.Axes]:
         """Plots uniaxial tension stress-strain and corresponding damage evolution curves.
         

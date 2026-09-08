@@ -321,7 +321,7 @@ class PINN_Geometry(ABC):
         data_left = Data(x=left_points, edge_index=edge_index)
         return data_left
     
-    def combine_graphs(self, graph_list: List[Data]):
+    def combine_graphs(self, graph_list: List[Data]) -> Data:
         """Merge multiple graphs into a single graph.
         
         Args:

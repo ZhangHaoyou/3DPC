@@ -32,7 +32,7 @@ class Boundary_Conditions:
         self.loading_node_tags = mesh.loading_node_tags
         self.move_vertically = move_vertically
         
-        self.logger = setup_logger(self.__class__.__name__)
+        self.logger = setup_logger(self.__class__.__name__, log_dir='log/fem/log')
         self.logger.info(
             "Initialized Boundary_Conditions | base_node_tags=%d | loading_node_tags=%d | move_vertically=%s",
             len(self.base_node_tags),

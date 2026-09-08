@@ -64,8 +64,8 @@ damage:
 
 # Geometry parameters
 geometry:
-  lx: 45                 # Domain length in X direction (mm)
-  ly: 45                 # Domain length in Y direction (mm)
+  lx: 40                 # Domain length in X direction (mm)
+  ly: 40                 # Domain length in Y direction (mm)
   lz: 15                 # Domain length in Z direction (mm)
   n_layers: 11           # Number of printed layers (unitless)
   ndof: 3                # Degrees of Freedom per node

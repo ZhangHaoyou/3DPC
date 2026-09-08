@@ -4,7 +4,7 @@
 
 # Concrete material properties
 concrete:
-  E: 26500           # Young's modulus (MPa)
+  E: 26500.0         # Young's modulus (MPa)
   E_pinn: 1.0        # Young's modulus (MPa) for PINN use
   nu: 0.25           # Poisson's ratio (unitless)
 
@@ -42,7 +42,7 @@ concrete:
 # Ac_cal, Bc_cal, At_cal, Bt_cal = 2.71, 1414, 1.0, 41085 # eps_cp = 0.002  # ib = 1.0
 damage:
   Ac: 1.0            # Compressive damage parameter A_c (unitless)
-  Bc: 3500.0         # Compressive damage parameter B_c (1/strain²)
+  Bc: 3000.0         # Compressive damage parameter B_c (1/strain²)
   At: 1.0            # Tensile damage parameter A_t (unitless)
   Bt: 41085.0        # Tensile damage parameter B_t (1/strain²)
   ib: 1.0            # Tension-compression interaction factor (0~1)
@@ -65,8 +65,8 @@ damage:
 
 # Geometry parameters
 geometry:
-  lx: 45                 # Domain length in X direction (mm)
-  ly: 45                 # Domain length in Y direction (mm)
+  lx: 40                 # Domain length in X direction (mm)
+  ly: 40                 # Domain length in Y direction (mm)
   lz: 15                 # Domain length in Z direction (mm)
   n_layers: 11           # Number of printed layers (unitless)
   ndof: 3                # Degrees of Freedom per node
@@ -77,5 +77,5 @@ mesh:
 
 # Contact interaction parameters
 contact:
-  epsilon: [50000, 10000]  # Penalty stiffness: [normal (N/mm), tangential (N/mm)]
+  epsilon: [1000000000000, 1000000000000]  # Penalty stiffness: [normal (N/mm), tangential (N/mm)]
   mu: 0.75             # Friction coefficient (unitless)
