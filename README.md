@@ -90,8 +90,8 @@ Python 3.10 with a CUDA 11.8 build of PyTorch was used for all reported results;
 on CPU.
 
 ```bash
-git clone https://github.com/ZhangHaoyou/3DPC.git
-cd 3DPC/pc
+git clone https://github.com/ZhangHaoyou/3DPC-FEM-PIGNN.git
+cd 3DPC-FEM-PIGNN/pc
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
